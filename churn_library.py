@@ -138,6 +138,7 @@ class Model:
         output:
                 data_frame: pandas dataframe
         '''
+        print("[INFO] read the data from {0}".format(pth))
         raw_data = pd.read_csv(pth)
         # Flag churn customer
         raw_data['Churn'] = raw_data['Attrition_Flag']\
@@ -155,14 +156,16 @@ class Model:
                 None
         '''
         # grouping columns by data type
-        # num_columns = self.data_frame.select_dtypes(include = "number")
-        # cat_columns = self.data_frame.select_dtypes(exclude = "number")
-        num_columns = self.data_frame[['Churn', 'Customer_Age', 'Total_Trans_Amt']]
-        cat_columns = self.data_frame[['Marital_Status', 'Gender']]
+        print("[INFO] Perform EDA")
+        num_columns = self.data_frame.select_dtypes(include = "number")
+        cat_columns = self.data_frame.select_dtypes(exclude = "number")
+        # num_columns = self.data_frame[['Churn', 'Customer_Age', 'Total_Trans_Amt']]
+        # cat_columns = self.data_frame[['Marital_Status', 'Gender']]
         # numeric data distribution plot
         for i in num_columns.columns:
             plt.figure(figsize=(20, 10))
             self.data_frame[i].hist()
+            print("[INFO] Create Histogram plot of {0} column".format(i))
             plt.title("{0} Distribution".format(i))
             plt.savefig('./images/eda/{0}.png'.format(i))
             plt.close()
@@ -170,10 +173,12 @@ class Model:
         for i in cat_columns.columns:
             plt.figure(figsize=(20, 10))
             self.data_frame[i].value_counts('normalize').plot(kind='bar')
+            print("[INFO] Create Bar plot of {0} column".format(i))
             plt.title("{0} Distribution".format(i))
             plt.savefig('./images/eda/{0}.png'.format(i))
             plt.close()
         # heatmap plot
+        print("[INFO] Create Heatmap Plot")
         plt.figure(figsize=(20, 10))
         sns.heatmap(self.data_frame.corr(), annot=False,
                     cmap='Dark2_r', linewidths=2)
@@ -190,6 +195,7 @@ class Model:
         output:
                 data_frame: pandas dataframe with new columns for
         '''
+        print("[INFO] One-hot encoding categorical columns")
         self.data_frame = pd.get_dummies(self.data_frame, columns = category_lst)
         return self.data_frame
 
@@ -206,14 +212,17 @@ class Model:
                   y_train: y training data
                   y_test: y testing data
         '''
+        print("[INFO] Feature engineering")
         copy_data = self.data_frame.copy()
         predictor_data = copy_data.drop([response], axis = 1)
         response_data = copy_data[response]
         predictor_column_names = predictor_data.columns
         # Standardization
+        print("[INFO] Standardization process")
         scaler = StandardScaler()
         scaled = scaler.fit_transform(predictor_data)
         predictor_scaled = pd.DataFrame(scaled, columns=predictor_column_names)
+        print("[INFO] Data splitting")
         self.x_train, self.x_test,self.y_train, self.y_test =\
             train_test_split(predictor_scaled,response_data,
                              test_size = test_size,random_state = 123)
@@ -226,6 +235,7 @@ class Model:
                   None
         '''
         # Model object initiation
+        print("[INFO] Model object inititation")
         rfc = RandomForestClassifier(random_state=42)
         lrc = LogisticRegression()
         # set parameters for tuning
@@ -237,6 +247,7 @@ class Model:
         }
         cv_rfc = GridSearchCV(estimator=rfc, param_grid=param_grid, cv=5)
         # model fitting
+        print("[INFO] model training")
         cv_rfc.fit(self.x_train, self.y_train)
         lrc.fit(self.x_train, self.y_train)
         # Choosing best estimator
@@ -245,9 +256,11 @@ class Model:
         y_train_preds_lr = lrc.predict(self.x_train)
         y_test_preds_lr = lrc.predict(self.x_test)
         # save best model
+        print("[INFO] Save the model objects")
         joblib.dump(cv_rfc.best_estimator_, './models/rfc_model.pkl')
         joblib.dump(lrc, './models/logistic_model.pkl')
         # save roc curve
+        print("[INFO] Create ROC curve")
         plt.figure(figsize=(15,8))
         plot_roc_curve(lrc,self.x_test,self.y_test,
                                  ax=plt.gca(),alpha=0.8)
@@ -259,6 +272,7 @@ class Model:
         plt.savefig('./images/results/roc_curve_result.png')
         plt.close()
         # Model report
+        print("[INFO] Create classification report")
         classification_report_image(self.y_train,
                                     self.y_test,
                                     y_train_preds_lr,
@@ -266,6 +280,7 @@ class Model:
                                     y_test_preds_lr,
                                     y_test_preds_rf)
         # feature importance
+        print("[INFO] Create feature importance plot")
         feature_importance_plot(cv_rfc.best_estimator_,self.x_train,"./images/results")
 
 if __name__ == "__main__":
